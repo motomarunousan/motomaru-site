@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写真ヘルパー｜モトマルノーサン</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --green-dark: #2d4720;
+    --green-mid: #466831;
+    --green-light: #a8c880;
+    --yellow: #e8d060;
+    --cream: #fffdf7;
+    --brown: #6b4c2a;
+    --text-dark: #2a1f10;
+    --text-mid: #443521;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: var(--cream);
+    color: var(--text-dark);
+    line-height: 1.7;
+    min-height: 100vh;
+    padding: 30px 20px 60px;
+  }
+  .container { max-width: 780px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 30px; }
+  header h1 {
+    font-size: 1.6rem;
+    color: var(--green-dark);
+    margin-bottom: 4px;
+  }
+  header .sub { font-size: .9rem; color: var(--text-mid); }
+  .card {
+    background: #fff;
+    border: 1.5px solid rgba(168, 200, 128, .5);
+    border-radius: 14px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.05);
+  }
+  .step-num {
+    display: inline-block;
+    width: 26px; height: 26px;
+    background: var(--green-dark); color: #fff;
+    border-radius: 50%; text-align: center;
+    line-height: 26px; font-weight: 700; font-size: .85rem;
+    margin-right: 8px;
+  }
+  h2 { font-size: 1.05rem; color: var(--green-dark); margin-bottom: 14px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .row:last-child { margin-bottom: 0; }
+  label { font-weight: 700; color: var(--text-dark); }
+  .kind-toggle { display: flex; gap: 10px; }
+  .kind-toggle label {
+    display: flex; align-items: center; gap: 6px;
+    background: #f5f1e0; padding: 8px 16px; border-radius: 99px;
+    cursor: pointer; transition: background .15s;
+  }
+  .kind-toggle label:has(input:checked) {
+    background: var(--green-dark); color: #fff;
+  }
+  .kind-toggle input { accent-color: var(--yellow); }
+  input[type="number"] {
+    background: #f5f1e0; border: 1.5px solid rgba(168,200,128,.5);
+    border-radius: 8px; padding: 6px 12px; font-size: 1rem;
+    width: 80px; font-family: inherit;
+  }
+  button {
+    background: var(--green-dark); color: #fff; border: none;
+    padding: 10px 22px; border-radius: 99px; font-size: .9rem;
+    font-weight: 700; cursor: pointer; transition: background .15s;
+    font-family: inherit;
+  }
+  button:hover { background: var(--green-mid); }
+  button:disabled { background: #c0bdaa; cursor: not-allowed; }
+  button.secondary {
+    background: transparent; color: var(--green-dark);
+    border: 1.5px solid var(--green-dark);
+  }
+  button.secondary:hover { background: rgba(45,71,32,.08); }
+  .drop-zone {
+    border: 2.5px dashed var(--green-light);
+    border-radius: 14px;
+    padding: 44px 20px;
+    text-align: center;
+    background: #fafcf4;
+    transition: background .2s, border-color .2s;
+    cursor: pointer;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    background: #f0f7e4;
+    border-color: var(--green-dark);
+  }
+  .drop-zone .icon { font-size: 2.4rem; margin-bottom: 6px; }
+  .drop-zone .hint { font-size: .8rem; color: var(--text-mid); margin-top: 6px; }
+  .preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .preview-item {
+    background: #f5f1e0;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .preview-item img {
+    width: 100%; height: 110px;
+    object-fit: cover; display: block;
+  }
+  .preview-item .name {
+    padding: 6px 8px;
+    font-size: .72rem;
+    background: var(--green-dark);
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+  }
+  .status {
+    padding: 12px 16px;
+    background: #f0f7e4;
+    border-radius: 10px;
+    font-size: .9rem;
+    margin-top: 14px;
+    color: var(--text-dark);
+  }
+  .status.error {
+    background: #fce4e4;
+    color: #a33;
+  }
+  .help {
+    font-size: .85rem;
+    color: var(--text-mid);
+    line-height: 1.85;
+  }
+  .help strong { color: var(--green-dark); }
+  .help ol { padding-left: 22px; margin-top: 8px; }
+  .action-row {
+    display: flex; gap: 12px; justify-content: center;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>🌾 写真ヘルパー</h1>
+    <p class="sub">ドラッグ＆ドロップで、自動リネーム＆リサイズ</p>
+  </header>
+
+  <div class="card">
+    <h2><span class="step-num">1</span>種類と開始番号</h2>
+    <div class="row">
+      <label>種類：</label>
+      <div class="kind-toggle">
+        <label><input type="radio" name="kind" value="nashi" checked>梨</label>
+        <label><input type="radio" name="kind" value="rice">稲</label>
+      </div>
+    </div>
+    <div class="row">
+      <label>開始番号：</label>
+      <input type="number" id="start-num" value="1" min="1" max="99">
+      <button class="secondary" id="auto-detect">↻ 現在の枚数を確認</button>
+    </div>
+    <div class="help" style="margin-top:8px">
+      「現在の枚数を確認」を押すと、公開中のサイトから現在の写真枚数を取得して、次の番号を自動でセットします。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">2</span>写真をドロップ</h2>
+    <div class="drop-zone" id="drop-zone">
+      <div class="icon">📷</div>
+      <div><strong>写真をここにドラッグ</strong>、またはクリックして選択</div>
+      <div class="hint">JPG / PNG / HEIC 対応（複数OK・順番はファイル名順）</div>
+      <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="status" id="status" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span>ダウンロード</h2>
+    <div class="action-row">
+      <button id="download-btn" disabled>Zipでダウンロード</button>
+      <button class="secondary" id="clear-btn">クリア</button>
+    </div>
+    <div class="help" style="margin-top:16px">
+      <strong>使い方の流れ：</strong>
+      <ol>
+        <li>種類（梨 or 稲）を選ぶ</li>
+        <li>「現在の枚数を確認」ボタンを押す（次の番号がセットされます）</li>
+        <li>写真をドラッグ or 選択</li>
+        <li>「Zipでダウンロード」を押す</li>
+        <li>解凍して、GitHubの <code>photos-nashi</code> または <code>photos-rice</code> フォルダにアップロード</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function() {
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('file-input');
+  var preview = document.getElementById('preview');
+  var startInput = document.getElementById('start-num');
+  var downloadBtn = document.getElementById('download-btn');
+  var clearBtn = document.getElementById('clear-btn');
+  var autoBtn = document.getElementById('auto-detect');
+  var statusEl = document.getElementById('status');
+
+  var pendingFiles = [];  // {file: File, blob: Blob, newName: String}
+
+  function getKind() {
+    return document.querySelector('input[name="kind"]:checked').value;
+  }
+
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg;
+    statusEl.className = 'status' + (isError ? ' error' : '');
+    statusEl.style.display = msg ? '' : 'none';
+  }
+
+  // ドラッグイベント
+  dropZone.addEventListener('click', function() {
+    fileInput.click();
+  });
+  ['dragenter', 'dragover'].forEach(function(ev) {
+    dropZone.addEventListener(ev, function(e) {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function(ev) {
+    dropZone.addEventListener(ev, function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    });
+  });
+  dropZone.addEventListener('drop', function(e) {
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', function(e) {
+    handleFiles(e.target.files);
+  });
+
+  async function handleFiles(files) {
+    if (!files || files.length === 0) return;
+    setStatus('処理中… 少々お待ちください', false);
+    downloadBtn.disabled = true;
+    var kind = getKind();
+    var startNum = parseInt(startInput.value) || 1;
+    var arr = Array.from(files).filter(function(f) { return f.type.startsWith('image/'); });
+    arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+    for (var i = 0; i < arr.length; i++) {
+      var num = startNum + pendingFiles.length + i;
+      var newName = kind + '-' + String(num).padStart(2, '0') + '.jpg';
+      try {
+        var blob = await processImage(arr[i]);
+        pendingFiles.push({ file: arr[i], blob: blob, newName: newName });
+        addPreview(blob, newName);
+      } catch (e) {
+        console.error('failed', arr[i].name, e);
+      }
+    }
+    setStatus(pendingFiles.length + ' 枚 準備できました（合計 ' + (Math.round(pendingFiles.reduce(function(s, x) { return s + x.blob.size; }, 0) / 1024)) + ' KB）', false);
+    downloadBtn.disabled = pendingFiles.length === 0;
+  }
+
+  async function processImage(file) {
+    // EXIF回転をブラウザに任せて読み込み → キャンバスでリサイズ → JPEG化
+    var bitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (e) {
+      // フォールバック: URL 経由
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      await new Promise(function(res, rej) {
+        img.onload = res; img.onerror = rej; img.src = url;
+      });
+      bitmap = img;
+      URL.revokeObjectURL(url);
+    }
+    var maxW = 1200;
+    var w = bitmap.width || bitmap.naturalWidth;
+    var h = bitmap.height || bitmap.naturalHeight;
+    var scale = Math.min(1, maxW / Math.max(w, h));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return await new Promise(function(resolve) {
+      canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', 0.72);
+    });
+  }
+
+  function addPreview(blob, name) {
+    var item = document.createElement('div');
+    item.className = 'preview-item';
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(blob);
+    item.appendChild(img);
+    var nameEl = document.createElement('div');
+    nameEl.className = 'name';
+    nameEl.textContent = name;
+    item.appendChild(nameEl);
+    preview.appendChild(item);
+  }
+
+  downloadBtn.addEventListener('click', async function() {
+    if (pendingFiles.length === 0) return;
+    var kind = getKind();
+    setStatus('Zipを作成中…', false);
+    downloadBtn.disabled = true;
+    var zip = new JSZip();
+    for (var i = 0; i < pendingFiles.length; i++) {
+      zip.file(pendingFiles[i].newName, pendingFiles[i].blob);
+    }
+    var content = await zip.generateAsync({ type: 'blob' });
+    var url = URL.createObjectURL(content);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'photos-' + kind + '-' + new Date().toISOString().slice(0, 10) + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus('✅ ダウンロードしました！解凍して photos-' + kind + '/ フォルダにアップロードしてください', false);
+    downloadBtn.disabled = false;
+  });
+
+  clearBtn.addEventListener('click', function() {
+    pendingFiles = [];
+    preview.innerHTML = '';
+    setStatus('', false);
+    downloadBtn.disabled = true;
+    fileInput.value = '';
+  });
+
+  autoBtn.addEventListener('click', async function() {
+    var kind = getKind();
+    autoBtn.disabled = true;
+    autoBtn.textContent = '確認中…';
+    setStatus('', false);
+    var base = 'https://motomarunousan.github.io/motomaru-site/';
+    var count = 0;
+    for (var i = 1; i <= 100; i++) {
+      var num = String(i).padStart(2, '0');
+      var src = base + 'photos-' + kind + '/' + kind + '-' + num + '.jpg';
+      try {
+        var r = await fetch(src, { method: 'HEAD', cache: 'no-cache' });
+        if (!r.ok) break;
+        count = i;
+      } catch (e) {
+        break;
+      }
+    }
+    if (count === 0) {
+      setStatus('取得できませんでした。手動で開始番号を入力してください。', true);
+    } else {
+      startInput.value = count + 1;
+      setStatus('✅ 現在 ' + count + ' 枚。次は ' + (count + 1) + ' 番から始まります。', false);
+    }
+    autoBtn.disabled = false;
+    autoBtn.textContent = '↻ 現在の枚数を確認';
+  });
+})();
+</script>
+</body>
+</html>
