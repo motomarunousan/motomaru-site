@@ -1576,26 +1576,32 @@
       border-left: 4px solid var(--yellow);
     }
     .gallery {
-      column-count: 3;
-      column-gap: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .gallery-col {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
     .gallery img {
       width: 100%;
       height: auto;
-      margin-bottom: 12px;
       border-radius: 10px;
       display: block;
       cursor: zoom-in;
       transition: transform .2s, box-shadow .2s;
-      break-inside: avoid;
     }
     .gallery img:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,.15);
     }
     @media (max-width: 768px) {
-      .gallery { column-count: 2; column-gap: 8px; }
-      .gallery img { margin-bottom: 8px; }
+      .gallery { gap: 10px; }
+      .gallery-col { gap: 10px; }
     }
 
     .gallery-more {
@@ -1667,6 +1673,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
+      align-items: start;
     }
     .sns-card {
       background: #fff;
@@ -2647,6 +2654,52 @@
     return count;
   }
 
+  function getImageRatio(src) {
+    return new Promise(function(resolve) {
+      var img = new Image();
+      img.onload = function() {
+        resolve(img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1);
+      };
+      img.onerror = function() { resolve(1); };
+      img.src = src;
+    });
+  }
+
+  function getColumnCount() {
+    return window.matchMedia('(max-width: 768px)').matches ? 2 : 3;
+  }
+
+  async function renderGallery(gallery, items) {
+    var colCount = getColumnCount();
+    gallery.innerHTML = '';
+    var cols = [];
+    var heights = [];
+    for (var c = 0; c < colCount; c++) {
+      var col = document.createElement('div');
+      col.className = 'gallery-col';
+      gallery.appendChild(col);
+      cols.push(col);
+      heights.push(0);
+    }
+    // 各画像の縦横比を先に取得し、常に一番背が低い列に置くことで凸凹を抑える
+    var ratios = await Promise.all(items.map(function(item) { return getImageRatio(item.src); }));
+    items.forEach(function(item, idx) {
+      var shortest = 0;
+      for (var c = 1; c < colCount; c++) {
+        if (heights[c] < heights[shortest]) shortest = c;
+      }
+      var img = document.createElement('img');
+      img.src = item.src;
+      img.alt = item.alt;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      cols[shortest].appendChild(img);
+      heights[shortest] += ratios[idx];
+    });
+  }
+
+  var galleryItemsCache = {};
+
   async function loadGalleries() {
     var galleries = document.querySelectorAll('.gallery[data-gallery-auto]');
     var totals = {};
@@ -2662,17 +2715,17 @@
       var showCount = Math.min(limit, total);
       var label = kind === 'nashi' ? '梨' : '稲';
 
-      gallery.innerHTML = '';
+      var items = [];
       for (var i = 0; i < showCount; i++) {
         var actualNum = total - i;
         var num = String(actualNum).padStart(2, '0');
-        var img = document.createElement('img');
-        img.src = 'photos-' + kind + '/' + kind + '-' + num + '.jpg';
-        img.alt = label + 'の写真 ' + actualNum;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        gallery.appendChild(img);
+        items.push({
+          src: 'photos-' + kind + '/' + kind + '-' + num + '.jpg',
+          alt: label + 'の写真 ' + actualNum
+        });
       }
+      galleryItemsCache[kind] = { gallery: gallery, items: items };
+      await renderGallery(gallery, items);
     }
 
     // 「もっと見る」ボタンの表示切替＆枚数更新
@@ -2684,6 +2737,22 @@
       var gallery = document.querySelector('.gallery[data-gallery-auto="' + kind + '"]');
       var limit = gallery ? (parseInt(gallery.dataset.galleryLimit) || Infinity) : Infinity;
       more.style.display = total > limit ? '' : 'none';
+    });
+
+    // 画面幅が変わって列数が変わったときは配置し直す
+    var lastColCount = getColumnCount();
+    window.addEventListener('resize', function() {
+      clearTimeout(window.__galleryResizeTimer);
+      window.__galleryResizeTimer = setTimeout(function() {
+        var newColCount = getColumnCount();
+        if (newColCount !== lastColCount) {
+          lastColCount = newColCount;
+          Object.keys(galleryItemsCache).forEach(function(kind) {
+            var entry = galleryItemsCache[kind];
+            renderGallery(entry.gallery, entry.items);
+          });
+        }
+      }, 200);
     });
   }
 
