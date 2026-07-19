@@ -104,12 +104,13 @@
 <style>
     /* ===== リセット & 基本設定 ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; overflow-x: hidden; }
     body {
       font-family: 'Hiragino Mincho ProN', 'Yu Mincho', '游明朝', serif;
       color: #3a2e1e;
       background: #fffdf7;
       line-height: 1.8;
+      overflow-x: hidden;
     }
 
     /* ===== カラーパレット ===== */
@@ -840,6 +841,9 @@
       transition: background .2s;
     }
     .rice-price-cta:hover { background: var(--green-mid); }
+
+    /* ===== 収穫カレンダー ===== */
+    .calendar-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* ===== 収穫時期カレンダー（バー形式） ===== */
     .hc-title {
